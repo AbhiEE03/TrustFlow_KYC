@@ -19,4 +19,4 @@ services:
     startCommand: "cd frontend && npm run preview"
     envVars:
       - key: NODE_VERSION
-        value: 18.16.0
+        value: "20"
