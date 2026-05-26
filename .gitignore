@@ -1,0 +1,40 @@
+# Virtual Environment
+backend/venv/
+venv/
+.venv/
+
+# Databases
+backend/db.sqlite3
+*.sqlite3
+
+# Python Caches & Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+backend/core/__pycache__/
+backend/kyc/__pycache__/
+backend/accounts/__pycache__/
+
+# Local Media and Statics
+backend/media/
+backend/staticfiles/
+backend/static/
+
+# Environment configurations and Secrets
+.env
+backend/.env
+frontend/.env
+*.local
+
+# Node and UI dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+node_modules/
+dist/
+
+# OS/IDE files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
