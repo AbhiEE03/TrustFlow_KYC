@@ -1,36 +1,29 @@
-KYC Onboarding Module: How I Built It
-This is a breakdown of the logic and choices I made for the TrustFlow KYC system.
+# TrustFlow KYC Onboarding: Architectural Decisions
 
-1. Preventing Illegal State Changes
-   The core of the app is the transition_state method in backend/kyc/models.py. I used a dictionary-based state machine here to define exactly which transitions are allowed (like draft can go to submitted, but rejected can't go straight to approved).
+This is a breakdown of the key logic, database, and structural decisions made for the **TrustFlow KYC** onboarding platform.
 
-Why? I put this in the model layer rather than the views so it’s impossible to bypass. Even if there’s a bug in the UI or a direct API hit, the database will throw a ValidationError if someone tries to jump statuses illegally.
+## 1. Preventing Illegal State Transitions
+The status workflow is enforced strictly at the model layer (`backend/kyc/models.py`) using a state transition dictionary:
+*   Transitions must match specific paths (e.g. `draft` -> `submitted` -> `under_review`).
+*   Validation is executed inside the model's `clean()` and `save()` logic rather than views, ensuring that illegal bypasses are blocked regardless of UI state or direct API requests.
 
-2. The Decoupled Deployment
-   I didn't go with a simple monolithic setup. I split the app to handle it like a real production system:
+## 2. PostgreSQL Migration & Concurrency
+To handle concurrent server requests and prevent race conditions in multi-worker production configurations, the persistence layer was moved completely to PostgreSQL:
+*   Django settings strictly require a PostgreSQL engine.
+*   Connection settings dynamically use `sslmode='require'` for remote databases (e.g. Render deployments) while bypassing SSL for local connections (`localhost`) to make development seamless.
+*   Handles URL-encoded passwords with special characters (like `@` to `%40`) securely within `DATABASE_URL`.
 
-Frontend: React/Vite on Vercel.
+## 3. Merchant Submission History (One-to-Many Relation)
+Originally, a merchant could only have a single onboarding application. To support iterative updates (e.g., when a reviewer requests updates or rejects a draft):
+*   Shifted from a `OneToOneField` to a `ForeignKey` relationship.
+*   Merchants can now build a historical log of their submissions.
+*   The Reviewer Queue remains efficient by fetching only the latest submission (`Max('id')`) per merchant, avoiding queue clutter.
 
-Backend: Django REST Framework on Render.
+## 4. Document Security & Size Limits
+File uploads in the onboarding flow are vetted inside the serializer layer:
+*   Type check: Limits uploads to safe, readable formats (`.pdf`, `.jpg`, `.png`).
+*   Size check: Enforces a strict 5MB file ceiling at the serializer level before database insertion, protecting server storage.
 
-The Fix: Connecting these was the hardest part. I had to configure CORS_ALLOWED_ORIGINS in Django so the Vercel domain could talk to the Render API. I also had to add a vercel.json file because Vercel was throwing 404s on page refreshes and static assets like the new logo.
-
-3. Document Security & Size Limits
-   In backend/kyc/serializers.py, I wrote custom validation for the Aadhaar and PAN uploads.
-
-Format: It checks the file extension and only allows .pdf, .jpg, or .png.
-
-The Manual Fix: I noticed the initial boilerplate didn't account for the 5MB limit mentioned in the requirements. I manually added a check for value.size > 5 _ 1024 _ 1024 to the serializer. This stops massive files from hitting the server and crashing the storage.
-
-4. The Reviewer Queue & SLA
-   The reviewer dashboard uses the ReviewerQueueViewSet.
-
-Sorting: I used .order_by('created_at') to create a First-In-First-Out queue. This ensures the oldest submissions get reviewed first.
-
-Live SLA: Instead of running a heavy background task to mark "At Risk" files, the frontend compares the created_at timestamp to the current time. If it’s been more than 24 hours, the "At Risk" badge pops up automatically.
-
-5. Keeping Data Private
-   To make sure one merchant can't see another's data, I customized get_queryset in the MerchantKYCViewSet. It uses KYCSubmission.objects.filter(merchant=self.request.user). This means the database query is automatically restricted to the logged-in user's ID, which prevents any horizontal privilege escalation attacks.
-
-6. Branding & Final Tweaks
-   I updated the project with a custom "K" logo and favicon. Dealing with the 404 errors on the logo after deployment was a lesson in case-sensitivity and Vercel's edge caching. I fixed this by standardizing the filenames to lowercase and forcing a clean redeploy without the build cache.
+## 5. Session and Token Hardening
+*   Dynamic CORS mapping allows Vercel frontend communication while keeping backend host lists secure.
+*   Stale authentication tokens are cleared on the login page mount, resolving credential collisions across browser tabs.

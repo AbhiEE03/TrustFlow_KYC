@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: playto-backend
+    name: kyc-backend
     env: python
     plan: free
     buildCommand: "cd backend && pip install -r requirements.txt && python manage.py migrate"
