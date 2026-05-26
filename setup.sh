@@ -1,7 +1,7 @@
 #!/bin/bash
-# setup.sh - Initial setup script for Playto Pay Monorepo Backend
+# setup.sh - Initial setup script for TrustFlow KYC Monorepo Backend
 
-echo "Setting up Playto Pay Backend..."
+echo "Setting up TrustFlow KYC Backend..."
 cd backend
 
 # Ensure virtual environment is activated in the current shell
@@ -27,4 +27,4 @@ python manage.py migrate
 echo "Creating superuser (you will be prompted for details)..."
 python manage.py createsuperuser
 
-echo "Playto Pay Backend initialization complete!"
+echo "TrustFlow KYC Backend initialization complete!"

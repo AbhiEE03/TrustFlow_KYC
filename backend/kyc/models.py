@@ -16,7 +16,7 @@ class KYCSubmission(models.Model):
         ('more_info_requested', 'More Info Requested'),
     )
 
-    merchant = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='kyc_submission')
+    merchant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='kyc_submissions')
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='draft')
     full_name = models.CharField(max_length=255)
     email = models.EmailField()

@@ -31,7 +31,7 @@ function Login() {
       <div className="bg-white py-8 px-10 shadow-lg rounded-xl w-full max-w-md border border-gray-100">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">System Access</h2>
-          <p className="text-sm text-gray-500 mt-2">Secure access to Playto Pay Operations</p>
+          <p className="text-sm text-gray-500 mt-2">Secure access to TrustFlow KYC Operations</p>
         </div>
         
         {error && <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">{error}</div>}

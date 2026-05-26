@@ -1,4 +1,4 @@
-# Playto Pay - KYC Onboarding Module
+# TrustFlow KYC - Merchant Onboarding Pipeline
 
 A high-integrity KYC (Know Your Customer) compliance pipeline. This project demonstrates a decoupled full-stack architecture, featuring a secure merchant onboarding flow, automated document validation logic, and a reviewer dashboard with dynamic SLA tracking.
 

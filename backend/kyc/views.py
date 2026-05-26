@@ -17,10 +17,25 @@ class MerchantKYCViewSet(mixins.CreateModelMixin,
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return KYCSubmission.objects.filter(merchant=self.request.user)
+        return KYCSubmission.objects.filter(merchant=self.request.user).order_by('-created_at')
 
     def perform_create(self, serializer):
         serializer.save(merchant=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def submit_application(self, request, pk=None):
+        submission = self.get_object()
+        try:
+            submission.transition_state('submitted')
+            return Response(
+                {"message": "Successfully submitted for review."},
+                status=status.HTTP_200_OK
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": str(e.message) if hasattr(e, 'message') else str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class ReviewerQueueViewSet(mixins.ListModelMixin,
@@ -30,7 +45,11 @@ class ReviewerQueueViewSet(mixins.ListModelMixin,
     permission_classes = [IsAuthenticated, IsReviewer]
 
     def get_queryset(self):
+        from django.db.models import Max
+        # Subquery to get the latest kyc submission ID for each merchant
+        latest_ids = KYCSubmission.objects.values('merchant').annotate(latest_id=Max('id')).values_list('latest_id', flat=True)
         return KYCSubmission.objects.filter(
+            id__in=latest_ids,
             status__in=['submitted', 'under_review', 'more_info_requested']
         ).order_by('created_at')
 

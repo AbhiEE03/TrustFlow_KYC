@@ -1,5 +1,5 @@
 KYC Onboarding Module: How I Built It
-This is a breakdown of the logic and choices I made for the Playto Pay KYC system.
+This is a breakdown of the logic and choices I made for the TrustFlow KYC system.
 
 1. Preventing Illegal State Changes
    The core of the app is the transition_state method in backend/kyc/models.py. I used a dictionary-based state machine here to define exactly which transitions are allowed (like draft can go to submitted, but rejected can't go straight to approved).
