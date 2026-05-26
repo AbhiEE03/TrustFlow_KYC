@@ -10,23 +10,39 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+import environ
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Initialize environment variables
+env = environ.Env(
+    DJANGO_DEBUG=(bool, True),
+    DJANGO_SECRET_KEY=(str, 'django-insecure-u0=kxlhl#m^u&86-_(z*2@g&(l!3vd6ur#8kv4%f7!-5^nbk5u'),
+    DATABASE_URL=(str, f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+    AWS_ACCESS_KEY_ID=(str, None),
+    AWS_SECRET_ACCESS_KEY=(str, None),
+    AWS_STORAGE_BUCKET_NAME=(str, None),
+    AWS_S3_REGION_NAME=(str, None),
+    AWS_S3_CUSTOM_DOMAIN=(str, None),
+    AWS_S3_ENDPOINT_URL=(str, None),
+)
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+# Take environment variables from .env file if it exists
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    environ.Env.read_env(str(env_file))
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-u0=kxlhl#m^u&86-_(z*2@g&(l!3vd6ur#8kv4%f7!-5^nbk5u'
+SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = ['playto-backend-6ji4.onrender.com']
-
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['playto-backend-6ji4.onrender.com', '127.0.0.1', 'localhost'])
 
 # Application definition
 
@@ -42,6 +58,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'storages',
 
     # Local apps
     'accounts.apps.AccountsConfig',
@@ -82,12 +99,15 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+DATABASE_URL = env('DATABASE_URL')
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(DATABASE_URL)
 }
+
+# If using PostgreSQL, ensure SSL mode is required for Render/production DBs
+if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS']['sslmode'] = 'require'
 
 
 # Password validation
@@ -125,15 +145,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
 
 # CORS Config
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     "http://localhost:5173",
     "https://kyc-abhi.vercel.app",
-]
+])
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -144,3 +165,45 @@ REST_FRAMEWORK = {
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Media & Storage Configuration
+AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
+
+if AWS_STORAGE_BUCKET_NAME:
+    # Remote Object Storage (AWS S3, Cloudflare R2, etc.)
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "bucket_name": AWS_STORAGE_BUCKET_NAME,
+                "region_name": env('AWS_S3_REGION_NAME'),
+                "access_key": env('AWS_ACCESS_KEY_ID'),
+                "secret_key": env('AWS_SECRET_ACCESS_KEY'),
+                "file_overwrite": False,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    
+    # Custom domain or endpoint configuration for R2/MinIO
+    AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN')
+    if AWS_S3_CUSTOM_DOMAIN:
+        STORAGES["default"]["OPTIONS"]["custom_domain"] = AWS_S3_CUSTOM_DOMAIN
+        
+    AWS_S3_ENDPOINT_URL = env('AWS_S3_ENDPOINT_URL')
+    if AWS_S3_ENDPOINT_URL:
+        STORAGES["default"]["OPTIONS"]["endpoint_url"] = AWS_S3_ENDPOINT_URL
+else:
+    # Local storage fallback
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
