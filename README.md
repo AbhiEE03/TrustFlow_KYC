@@ -138,14 +138,6 @@ python manage.py runserver
 
 ---
 
-## Screenshots
-
-> Login · Merchant Dashboard · Onboarding Form · Draft State · Submitted State · Reviewer Queue
-
-_(See screenshots in /docs or live demo above)_
-
----
-
 ## What I Learned
 
 - Designing state machines that enforce business logic at the right layer
